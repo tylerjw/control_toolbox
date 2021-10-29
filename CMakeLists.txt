@@ -56,6 +56,49 @@ ament_target_dependencies(parameter_handler
   rcutils
 )
 
+########################
+# Build control filters
+########################
+find_package(filters REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(Eigen3 REQUIRED)
+
+set(CONTROL_FILTERS_INCLUDE_DEPENDS
+  filters
+  geometry_msgs
+  pluginlib
+  rclcpp
+  tf2_geometry_msgs
+  tf2_ros
+)
+
+add_library(gravity_compensation SHARED
+  src/control_filters/gravity_compensation.cpp
+)
+target_include_directories(gravity_compensation PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(gravity_compensation ${CONTROL_FILTERS_INCLUDE_DEPENDS})
+
+add_library(low_pass_filter SHARED
+  src/control_filters/low_pass_filter.cpp
+)
+target_include_directories(low_pass_filter PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}>
+    $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(low_pass_filter ${CONTROL_FILTERS_INCLUDE_DEPENDS})
+
+
+##########
+# Testing
+##########
 if(BUILD_TESTING)
   find_package(ament_cmake_gmock REQUIRED)
   find_package(ament_cmake_gtest REQUIRED)
@@ -70,6 +113,17 @@ if(BUILD_TESTING)
   ament_add_gtest(pid_publisher_tests test/pid_publisher_tests.cpp)
   target_link_libraries(pid_publisher_tests ${PROJECT_NAME})
   ament_target_dependencies(pid_publisher_tests rclcpp_lifecycle)
+
+  ## Control Filters
+  ament_add_gmock(test_gravity_compensation test/control_filters/test_gravity_compensation.cpp)
+  target_link_libraries(test_gravity_compensation gravity_compensation)
+  ament_target_dependencies(test_gravity_compensation ${CONTROL_FILTERS_INCLUDE_DEPENDS})
+  
+  ament_add_gmock(test_low_pass_filter test/control_filters/test_low_pass_filter.cpp)
+  target_link_libraries(test_low_pass_filter low_pass_filter)
+  ament_target_dependencies(test_low_pass_filter ${CONTROL_FILTERS_INCLUDE_DEPENDS})
+  
+
 endif()
 
 # Install
@@ -81,15 +135,30 @@ install(TARGETS ${PROJECT_NAME} parameter_handler
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
+install(TARGETS gravity_compensation
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+# Install pluginlib xml
+pluginlib_export_plugin_description_file(filters control_filters.xml)
+
 ament_export_dependencies(
   rcl_interfaces
   rclcpp
   rcutils
-  realtime_tools)
-ament_export_include_directories(include)
+  realtime_tools
+  ${CONTROL_FILTERS_INCLUDE_DEPENDS}
+)
+ament_export_include_directories(
+  include
+)
 ament_export_libraries(
   ${PROJECT_NAME}
   parameter_handler
+  gravity_compensation
+  low_pass_filter
 )
 
 ament_package()
