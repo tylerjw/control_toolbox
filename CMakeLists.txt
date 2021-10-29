@@ -57,17 +57,17 @@ ament_target_dependencies(parameter_handler
 )
 
 ########################
-# Build control filters
+# Control filters
 ########################
 find_package(filters REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
-find_package(rclcpp REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 set(CONTROL_FILTERS_INCLUDE_DEPENDS
+  Eigen3
   filters
   geometry_msgs
   pluginlib
@@ -79,20 +79,15 @@ set(CONTROL_FILTERS_INCLUDE_DEPENDS
 add_library(gravity_compensation SHARED
   src/control_filters/gravity_compensation.cpp
 )
-target_include_directories(gravity_compensation PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
+target_include_directories(gravity_compensation PUBLIC include)
+target_link_libraries(gravity_compensation parameter_handler)
 ament_target_dependencies(gravity_compensation ${CONTROL_FILTERS_INCLUDE_DEPENDS})
 
 add_library(low_pass_filter SHARED
   src/control_filters/low_pass_filter.cpp
 )
-target_include_directories(low_pass_filter PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}>
-    $<INSTALL_INTERFACE:include>
-)
+target_include_directories(low_pass_filter PUBLIC include)
+target_link_libraries(low_pass_filter parameter_handler)
 ament_target_dependencies(low_pass_filter ${CONTROL_FILTERS_INCLUDE_DEPENDS})
 
 
@@ -118,12 +113,10 @@ if(BUILD_TESTING)
   ament_add_gmock(test_gravity_compensation test/control_filters/test_gravity_compensation.cpp)
   target_link_libraries(test_gravity_compensation gravity_compensation)
   ament_target_dependencies(test_gravity_compensation ${CONTROL_FILTERS_INCLUDE_DEPENDS})
-  
+
   ament_add_gmock(test_low_pass_filter test/control_filters/test_low_pass_filter.cpp)
   target_link_libraries(test_low_pass_filter low_pass_filter)
   ament_target_dependencies(test_low_pass_filter ${CONTROL_FILTERS_INCLUDE_DEPENDS})
-  
-
 endif()
 
 # Install
@@ -135,7 +128,7 @@ install(TARGETS ${PROJECT_NAME} parameter_handler
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
-install(TARGETS gravity_compensation
+install(TARGETS gravity_compensation low_pass_filter
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -157,6 +150,7 @@ ament_export_include_directories(
 ament_export_libraries(
   ${PROJECT_NAME}
   parameter_handler
+
   gravity_compensation
   low_pass_filter
 )
