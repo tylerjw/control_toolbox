@@ -22,7 +22,6 @@
 
   <exec_depend>control_msgs</exec_depend>
 
-  <depend>rcl_interfaces</depend>
   <depend>filters</depend>
   <depend>geometry_msgs</depend>
   <depend>pluginlib</depend>
